@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pydantic-settings
+python-jose
+passlib
+bcrypt==4.0.1
+openai
+requests
+python-docx
+reportlab
+python-multipart
+pypdf
+openpyxl
