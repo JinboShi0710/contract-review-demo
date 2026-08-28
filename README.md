@@ -1,259 +1,153 @@
 # Contract Review Demo
 
-这是基于 ContractLens 二次开发的本地演示项目，招投标流程参考 Tender Review Kit，合同审核证据链参考 ArchSight AIOS。上游说明见 [第三方致谢](THIRD_PARTY_NOTICES.md) 和 [Tender Review 许可](backend/app/services/TENDER_REVIEW_ATTRIBUTION.md)。
+合同与招投标文件智能审查演示系统。
 
-## 本次代码快照（2026-08-28）
+面向文件初审场景，结合文档解析、确定性规则和大模型语义分析，提取合同要素、提示风险、整理投标响应要求，并提供原文依据供人工核对。
 
-- 保存合同审核、招投标审核、模型配置及用户设置等当前源代码；不代表全部功能已经通过验收。
-- 不包含本机 `.env`、数据库、用户合同、报告、日志、虚拟环境或 Node 依赖。
-- GitHub 副本的 OCR 令牌改为 `OCR_API_TOKEN` 配置，未修改原电脑文件。将 `backend/.env.example` 复制为 `backend/.env`，填入自己的 LLM 和 OCR 配置。
-- 首次运行需要安装依赖并初始化数据库；默认演示账号为 `admin / admin123`，应立即修改密码及 `JWT_SECRET`，不得直接暴露到公网。
-- 招投标演示版单次模型输入限制为前 50,000 字符、80 条关键词候选，提示模型最多返回30项。长文不能视为全文审核；免费模型仍可能限流、超时或返回不完整结果。
-- 以下保留上游使用说明供参考，功能和默认设置以当前代码为准。
+> 当前为本地演示版本，重点建设合同审核和招投标审核。尚未完成生产级稳定性、安全性及审核准确率验证，不应将结果直接作为最终业务决策。
 
----
+## 主要功能
 
-# ContractLens
+### 合同审核
 
-> 合同智能审核开源框架 — *See through every contract.*
+- 上传 PDF、JPG/JPEG、PNG、DOCX、TXT、Markdown 文件。
+- 文本型文件优先直接提取文字，扫描件和图片使用远程 OCR。
+- 提取合同主体、金额、编号、交易标的等要素。
+- 结合关键词、格式规则和大模型开展风险与完整性检查。
+- 展示风险说明、原文证据、位置及复核建议。
+- 区分有依据的通过、风险和无法确定；模型未识别到问题不等于合同没有问题。
+- 支持查看审核记录及导出 PDF / Word 报告。
 
-基于 OCR + LLM 的合同审核与凭证处理框架，提供开箱即用的要素提取、风险检测、规则引擎和报告导出能力，支持二次开发与行业定制。
+### 招投标审核
 
----
+- 上传可提取文字的 PDF 或 DOCX。
+- 识别招标采购文件、采购需求说明书、合同及其他文档类型。
+- 对适用文档整理否决与废标事项、评分事项、证明材料、重点参数、时间节点、合同条款、技术要求和验收交付要求。
+- 对模型引用进行原文反查，展示证据及提取行号。
+- 导出 Excel 投标响应清单，便于补充责任人和完成情况。
 
-## 功能特性
+### 模型与账户配置
 
-| 模块 | 功能 |
-|------|------|
-| **合同审核** | OCR 识别、关键要素提取、多维风险检测、模板比对 |
-| **风险引擎** | 关键词 / 正则 / 黑名单 / LLM 语义四层规则，可视化配置 |
-| **凭证处理** | 证件分类识别、要素抽取（含手写体）、语义理解 |
-| **报告导出** | 审核报告一键导出为 PDF / Word |
-| **规则管理** | 审核点可配置化，支持版本管理与回滚 |
+- 在页面配置模型供应商、接口地址、模型名称、API Key 和请求超时。
+- 提供 OpenRouter、DeepSeek、豆包、通义千问等供应商配置入口，也可填写兼容接口。
+- 支持连接测试；保存的 API Key 不在页面回显。
+- 支持用户信息查看、密码修改、角色展示和退出登录。
 
----
+### 其他保留模块
 
-## 技术栈
+模板比对、凭证处理和审核规则管理入口仍保留。其中模板比对、凭证处理不是本轮重点完善的功能，不代表已完成全面验证。
 
-```
-后端：FastAPI (Python 3.11+) + SQLAlchemy + SQLite
-前端：React 18 + TypeScript + Vite + Ant Design
-OCR： PaddleOCR
-LLM： DeepSeek V3（兼容 OpenAI API，可替换任意模型）
-```
+## 典型使用流程
 
----
+1. 登录系统，在模型设置中配置可用的模型服务。
+2. 选择合同审核或招投标审核，上传文件。
+3. 等待解析与语义分析完成。
+4. 查看要素、风险或响应事项，结合原文核对关键结论。
+5. 导出报告或清单，进入人工复核。
 
-## 快速开始
+## 本地启动（Windows PowerShell）
 
-### 前置条件
+需要 Python、Node.js 和 npm。以下命令针对首次下载；已有本地配置时不要覆盖 `.env`。
 
-- Python 3.11+
-- Node.js 18+
-- pip
-- Docker & Docker Compose（可选，容器部署）
+### 1. 获取代码
 
-### 1. 克隆项目
-
-```bash
-git clone https://github.com/your-org/contractlens.git
-cd contractlens
+```powershell
+git clone https://github.com/JinboShi0710/contract-review-demo.git
+cd contract-review-demo
 ```
 
-### 2. Docker 部署（推荐）
+私有仓库需要先获得访问权限，也可以通过 GitHub 下载 ZIP 并解压。
 
-```bash
-# 复制并编辑环境变量
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，填入 LLM_API_KEY 和 JWT_SECRET
+### 2. 配置并启动后端
 
-# 启动（前端 + 后端）
-docker-compose up -d
+在项目根目录执行：
 
-# 访问
-# 前端：http://localhost
-# 后端：http://localhost:8006
-# API 文档：http://localhost:8006/docs
-```
-
-**注意**：`JWT_SECRET` 在生产环境必须更换为随机字符串。
-
-### 3. 手动部署
-
-```bash
+```powershell
 cd backend
-cp .env.example .env
+py -m venv .venv
+& ".\.venv\Scripts\python.exe" -m pip install -r requirements.txt
+Copy-Item .env.example .env
+notepad .env
 ```
 
-编辑 `.env`，填入你的 LLM API Key：
+根据自己的服务填写：
 
-```env
-LLM_API_KEY=your_api_key_here
-LLM_BASE_URL=https://api.deepseek.com   # 或其他兼容 OpenAI API 的服务
-LLM_MODEL=deepseek-chat
-JWT_SECRET=change-this-secret-in-production
+- `LLM_API_KEY`：模型服务密钥。
+- `LLM_BASE_URL`：模型接口地址。
+- `LLM_MODEL`：服务商支持的模型 ID。
+- `LLM_TIMEOUT`：模型请求超时设置。
+- `JWT_SECRET`：自行生成的随机密钥。
+- `OCR_API_TOKEN`：使用远程 OCR 时需要的令牌。
+
+随后执行：
+
+```powershell
+& ".\.venv\Scripts\python.exe" init_db.py
+& ".\.venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8006
 ```
 
-### 3. 启动后端
+### 3. 启动前端
 
-```bash
-cd backend
-pip install -r requirements.txt
-python init_db.py          # 初始化数据库
-uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+新开一个 PowerShell 窗口，进入下载目录中的 `contract-review-demo\frontend`，执行：
+
+```powershell
+npm.cmd install
+npm.cmd run dev
 ```
 
-后端启动后访问 API 文档：http://localhost:8006/docs
+- 页面：http://localhost:3000
+- 后端健康检查：http://127.0.0.1:8006/health
+- API 文档：http://127.0.0.1:8006/docs
 
-### 4. 启动前端
+首次初始化的演示账号为 `admin / admin123`，登录后应修改密码。前后端窗口均需保持运行。
 
-```bash
-cd frontend
-npm install
-npm run dev
+## 当前边界
+
+- 招投标审核只向模型提供带行号文本的前 **50,000 字符**、最多 **80 条关键词候选**，并在提示中要求最多返回 **30 项**。超过范围的文档不能视为完成全文审核。
+- DOCX 的提取位置不等于 Word 最终排版页码；应结合原文和行号定位。
+- 模型调用可能限流、超时、返回空内容或不完整 JSON；同一文件重复审核也可能产生差异。
+- 审核依据主要来自上传文档、配置规则和模型分析，未建设独立的行业知识库或权威法规核验服务。
+- 原文反查用于核对引用，不等于证实分析结论正确。签章、黑名单和其他外部事实仍需额外证据。
+- 当前仍存在长时间等待、失败提示与任务进度展示需要完善的问题。演示前应使用准备好的样本实测。
+
+## 数据与安全
+
+- 仓库不包含本机密钥、数据库、合同、报告、日志和依赖目录。
+- 本地部署不等于全部数据都在本地：模型分析会将相关文本发送至所配置的服务，远程 OCR 会处理上传的文件。
+- 测试请优先使用脱敏材料，不要直接上传保密合同或个人敏感信息。
+- 不要将 `.env`、真实令牌及用户数据提交到仓库。
+- 本项目尚不适合直接暴露到公网。
+
+## 技术与目录
+
+后端使用 FastAPI、SQLAlchemy 和 SQLite；前端使用 React、TypeScript、Vite 和 Ant Design。文档处理使用 pypdf、python-docx 等工具，模型调用通过兼容接口接入。
+
+- `backend/app/api/v1/`：合同、招投标、账户和配置接口。
+- `backend/app/services/`：审核、提取、报告和清单生成逻辑。
+- `backend/app/utils/`：文档处理、OCR 和模型客户端。
+- `backend/tests/`：现有自动化测试。
+- `frontend/src/pages/`：业务页面。
+- `frontend/src/components/`：页面组件。
+
+## 开发检查
+
+后端目录：
+
+```powershell
+& ".\.venv\Scripts\python.exe" -m unittest discover -s tests -v
 ```
 
-访问：http://localhost:3000
+前端目录：
 
----
-
-## 目录结构
-
-```
-contractlens/
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/          # API 路由（合同、凭证、审核规则）
-│   │   ├── core/            # 配置、数据库连接
-│   │   ├── models/          # SQLAlchemy 数据模型
-│   │   ├── schemas/         # Pydantic 请求/响应模型
-│   │   ├── services/        # 业务逻辑层
-│   │   └── utils/           # OCR 引擎、LLM 客户端
-│   ├── .env.example         # 环境变量模板
-│   ├── requirements.txt
-│   └── init_db.py
-├── frontend/
-│   └── src/
-│       ├── pages/           # 页面（合同列表、审核详情、凭证处理等）
-│       ├── services/        # API 调用封装
-│       └── types/           # TypeScript 类型定义
-└── exports/                 # 导出报告存放目录
+```powershell
+npm.cmd exec tsc -- --noEmit
+npm.cmd run build
 ```
 
----
+这些检查不代表真实模型调用、审核质量及全部业务流程已验证。
 
-## 配置说明
+## 开源来源与许可
 
-所有配置均通过环境变量管理，详见 `backend/.env.example`：
+本项目在 ContractLens 基础上二次开发，招投标流程参考 Tender Review Kit，合同审核工作流参考 ArchSight AIOS。相关原始版权和许可声明予以保留，不表示获得上游项目的官方背书。
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `LLM_API_KEY` | LLM 服务 API Key（必填） | — |
-| `LLM_BASE_URL` | LLM 服务地址 | `https://api.deepseek.com` |
-| `LLM_MODEL` | 模型名称 | `deepseek-chat` |
-| `APP_NAME` | 系统名称（可自定义） | `ContractLens` |
-| `DATABASE_URL` | 数据库连接 | `sqlite:///./data/contract_review.db` |
-| `UPLOAD_DIR` | 上传文件目录 | `./uploads` |
-| `EXPORT_DIR` | 报告导出目录 | `./exports` |
-| `MAX_FILE_SIZE` | 最大上传文件大小 | `20MB` |
-| `OCR_USE_GPU` | OCR 是否使用 GPU | `false` |
-
-### 替换 LLM 服务
-
-ContractLens 兼容任何 OpenAI API 格式的 LLM 服务：
-
-```env
-# 使用 OpenAI
-LLM_API_KEY=sk-xxx
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o
-
-# 使用 Ollama（本地）
-LLM_API_KEY=ollama
-LLM_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=qwen2.5
-```
-
----
-
-## API 文档
-
-启动后端后访问 Swagger UI：http://localhost:8006/docs
-
-主要接口：
-
-```
-POST /api/v1/contracts/upload          # 上传合同
-POST /api/v1/contracts/{id}/process    # 触发审核（OCR + 要素 + 风险）
-GET  /api/v1/contracts/{id}            # 获取审核结果
-GET  /api/v1/contracts/{id}/report/export?format=pdf|word  # 导出报告
-POST /api/v1/contracts/compare         # 模板比对
-GET  /api/v1/audit-rules               # 获取审核规则列表
-POST /api/v1/audit-rules               # 创建审核规则
-POST /api/v1/vouchers/process          # 凭证处理
-```
-
----
-
-## 运行测试
-
-```bash
-cd contractlens   # 项目根目录
-
-# L1 单元测试（~10s）
-pytest -k "unit" -v
-
-# L2 冒烟测试（~30s）
-pytest -k "fc01 or fc02" -v
-
-# L3 完整测试（~60s+）
-pytest .pact/tests/features/ -v
-```
-
----
-
-## 二次开发指南
-
-### 自定义审核规则
-
-在管理界面或通过 API 创建审核规则，支持四种类型：
-
-```json
-{
-  "name": "禁止免责条款",
-  "rule_type": "keyword",
-  "params": { "keywords": ["免责声明", "不承担任何责任"] },
-  "severity": "high",
-  "enabled": true
-}
-```
-
-规则类型：
-- `keyword` — 关键词匹配
-- `regex` — 正则表达式校验
-- `blacklist` — 黑名单实体匹配
-- `llm_risk` / `llm_compliance` / `llm_completeness` — LLM 语义分析
-
-### 替换 OCR 引擎
-
-修改 `backend/app/utils/ocr/engine.py`，实现同样的接口即可接入其他 OCR 服务。
-
-### 行业定制
-
-通过配置审核规则和 LLM Prompt（`backend/app/services/audit_engine.py`）可适配不同行业场景：金融、法律、地产、供应链等。
-
----
-
-## 当前限制
-
-- 数据库：SQLite（生产环境建议替换为 PostgreSQL/MySQL）
-- 并发：单实例部署，多实例需配置共享存储
-- 文件：不支持批量上传
-- 移动端：仅支持桌面浏览器
-- OCR：依赖 PaddleOCR API（远程服务）
-
----
-
-## 许可证
-
-Apache License 2.0 — see [LICENSE](LICENSE)
+详见 [第三方致谢](THIRD_PARTY_NOTICES.md)、[Tender Review 许可声明](backend/app/services/TENDER_REVIEW_ATTRIBUTION.md) 和 [LICENSE](LICENSE)。
